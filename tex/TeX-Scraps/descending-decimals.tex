@@ -1,7 +1,0 @@
-\newdimen\smaaal \smaaal30pt
-
-\def\smaller#1{\quitvmode\begingroup\dimen@\smaaal\sm@ller#1\@nil}
-\def\sm@ller#1{%
-    \ifx\@nil#1 \endgroup \else \font\next=cmr10 at\dimen@\next \raise\dimexpr(\smaaal-\dimen@)/4\hbox{#1}%
-    \multiply\dimen@15\divide\dimen@16 \expandafter\sm@ller\fi
-}
