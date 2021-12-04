@@ -1,0 +1,34 @@
+\def\cinum#1{\expandafter\@cinum\expanded{\expandafter\@cinum@\number#1\relax}}
+\def\@cinum#1#2#3#4{%
+    \if-#1 \expandafter\@firstoftwo \else \expandafter\@secondoftwo \fi
+    {\@cinum#2#3#4}{%
+        \ifhmode\kern3.2pt\fi\ensuremath{\vcenter{\pdfsave\pdfliteral{%
+            1 j 1 J 1.5 w
+            .5 0 0 .5 0 1 cm
+            0 -7.5 m 0 7.5 l S
+            1 0 0 1 0 2.5 cm
+            \@cinum@digit#4
+            -1 0 0 1 0 0 cm
+            \@cinum@digit#3
+            1 0 0 -1 0 -5 cm
+            \@cinum@digit#1
+            -1 0 0 1 0 0 cm
+            \@cinum@digit#2
+        }\pdfrestore}}\kern3.2pt\relax
+    }%
+}
+\def\@cinum@digit#1{%
+    \ifcase#1 \expandafter\@gobbletwo
+        \or 0 5 m 5 5             % 1
+        \or 0 0 m 5 0             % 2
+        \or 0 5 m 5 0             % 3
+        \or 0 0 m 5 5             % 4
+        \or 0 0 m 5 5 l 0 5       % 5
+        \or 5 0 m 5 5             % 6
+        \or 0 5 m 5 5 l 5 0       % 7
+        \or 0 0 m 5 0 l 5 5       % 8
+        \or 0 0 m 5 0 l 5 5 l 0 5 % 9
+    \fi l S
+}
+\def\@cinum@#1\relax{\ifnum\@m>#1 0\ifnum100>#1 0\ifnum10>#1 0\fi\fi\fi#1}
+
