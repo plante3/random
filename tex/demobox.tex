@@ -25,13 +25,15 @@
 }}
 \font\demoboxF=cmtt10
 
-\protected\long\def\dashbox#1{\hbox{\raise-\dp\z@\vbox{%
-	\setbox\z@\hbox{#1}\offinterlineskip
-	\ialign{##\crcr \xleaders\copy\dashboxH\hfil \crcr
-		\rlap\dashboxA \raise\dp\z@\hbox{\xleaders\copy\dashboxH\hskip\wd\z@}\crcr
-		\xleaders\copy\dashboxH\hfil \crcr
+\protected\long\def\dashbox#1{\hbox{%
+	\setbox\z@\hbox{#1}\raise-\dp\z@\vbox{%
+		\offinterlineskip
+		\ialign{##\crcr \xleaders\copy\dashboxH\hfil \crcr
+			\rlap\dashboxA \raise\dp\z@\hbox{\xleaders\copy\dashboxH\hskip\wd\z@}\crcr
+			\xleaders\copy\dashboxH\hfil \crcr
+		}%
 	}%
-}}}
+}}
 \def\dashboxA{\valign{##\crcr
 	\xleaders\copy\dashboxV\vfil \crcr
 	\copy\z@ \crcr
