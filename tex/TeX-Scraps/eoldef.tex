@@ -1,0 +1,16 @@
+\protected\long\def\eoldef#1#2#{%
+    \begingroup \escapechar\m@ne
+    \edef\tmpa{\endgroup \def\noexpand\tmpb{\string#1}}\tmpa
+    \flags\protected\expandafter\edef\csname \tmpb \endcsname
+        {\noexpand\eol@\expandafter\noexpand\csname xeol@\tmpb\endcsname}%
+    \flags\protected\expandafter\def\csname xeol@\tmpb \endcsname#2*%
+}
+\def\eol@#1{\let\eol@next=#1\begingroup\futurelet\@let@token\eol@aux}
+\def\eol@aux{\ifx\@let@token\bgroup \endgroup\expandafter\eol@b \else \expandafter\eol@e \fi}
+\def\eol@e{\catcode`\^^M12\relax\eol@ex}
+\begingroup\lccode`+=`\^^M
+\lowercase{\endgroup
+    \long\def\eol@ex#1+{\endgroup\eol@next#1*}
+    \long\def\eol@b#1{\eol@next#1*}
+}
+\let\flags=\relax

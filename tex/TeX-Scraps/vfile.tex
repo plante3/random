@@ -1,0 +1,99 @@
+% \usepackage{xcolor}
+\catcode`\@=11
+
+\def\sdef#1{\expandafter\def\csname#1\endcsname}
+\def\slet#1{\expandafter\let\csname#1\endcsname}
+\def\ssmap#1#2 {\ifx\;#2\expandafter\@gobbletwo \else #1{#2}\fi \ssmap#1}
+\long\def\afterfi#1\fi{\fi#1}
+
+\protected\def\@sanitizex{\count@\z@ \loop \catcode\count@12 \advance\count@\@ne \ifnum\count@<\@cclvi\repeat}
+
+\newread\vfileR
+\protected\def\vfile#1#2#3{%
+    \relax\ifhmode\par\fi \smallskip
+    \begingroup
+    \immediate\openin\vfileR={\romannumeral-`0#1}%
+        \ifeof\vfileR \immediate\closeout\vfileR \def\@sanitizex##1\endgroup{\engroup}\fi % eat everything
+    \@sanitizex \endlinechar\m@ne
+    \count@\@ne \count1\numexpr#2-1\relax \count3\numexpr#3+1\relax
+    \everypar={\hangindent3em\hangafter\@ne}\raggedright
+    \vfile@normal
+        \loop \read\vfileR to\tmpa
+            \ifnum\count@>\count1
+                \noindent\llap{\vfile@lineno \the\count@ \quad}%
+                \expandafter\vfile@
+                \tmpa
+                \vfile@
+                \par
+            \fi
+            \advance\count@\@ne
+            \ifnum\count@<\count3\repeat
+    \immediate\closeout\vfileR
+    \endgroup \par\smallskip
+}
+\def\vfile@#1{%
+    \ifx\vfile@#1\expandafter\@gobble \else
+    \allowbreak
+    \ifcsname vfile/\number`#1\endcsname
+        \csname vfile/\number`#1\expandafter\endcsname \fi
+    #1%
+    \fi \vfile@
+}
+\newbox\vfile@spbox
+\newbox\vfile@tabbox
+\sdef{vfile/\number`\ }#1{\copy\vfile@spbox}
+\sdef{vfile/\number`\^^I}#1{\copy\vfile@tabbox}
+\sdef{vfile/\number`\%}#1{\begingroup\def\par{\endgroup\par}\vfile@comment#1}
+\sdef{vfile/\number`\\}#1\vfile@{\fi \vfile@csinit}
+\def\vfile@csinit#1{%
+    \ifx\vfile@#1\else
+    \ifcase\uccode`#1%
+        \@backslashchar#1%
+        \expandafter\expandafter\expandafter\vfile@
+    \else \afterfi\afterfi \vfile@cs#1\@@ \fi\fi
+}
+\def\vfile@cs#1\@@#2{%
+    \ifx\vfile@#2%
+        \vfile@cshl#1\@@
+    \else
+    \ifcase\uccode`#2%
+        \vfile@cshl#1\@@
+        \expandafter\expandafter\expandafter\vfile@\expandafter\expandafter\expandafter#2%
+    \else \afterfi\afterfi \vfile@cs#1#2\@@ \fi\fi
+}
+\def\vfile@cshl#1\@@{%
+    \begingroup
+    \ifcsname vfile/#1\endcsname
+        \csname vfile/#1\expandafter\endcsname
+    \else
+        \expandafter\ifpdfprimitive\csname#1\endcsname \vfile@csprimitive \fi
+    \fi \@backslashchar#1%
+    \endgroup
+}
+
+\def\vfile@cshlfam#1{\def\tmp{#1}\ssmap\vfile@@cshlfam}
+\def\vfile@@cshlfam#1{\slet{vfile/#1}\tmp}
+
+%% Example setup
+
+\vfile@cshlfam{\color{blue}}%
+m@ne z@ z@skip p@ @ne tw@ thr@@ sixt@@n @cclv @cclvi @m @M @Mi @Mii @Miii @Miv @MM maxdimen centering jot voidb@x \; %
+\vfile@cshlfam{\color{red}}%
+if ifcat ifnum ifdim ifodd ifvmode ifhmode ifmmode ifinner ifvoid ifhbox ifvbox ifx ifeof iftrue iffalse ifcase ifdefined ifcsname iffontchar ifpdfabsnum ifpdfabsdim ifincsname ifpdfprimitive unless else fi \; %
+
+\def\vfile@normal     {\tt\color{black}}
+\def\vfile@lineno     {\tt\scriptsize\color{gray}}
+\def\vfile@comment    {\slshape\color{gray}}
+\def\vfile@csprimitive{\color{magenta}}
+\setbox\vfile@spbox \hbox{{\color{lightgray}\tt\char`\ }}
+\setbox\vfile@tabbox\hbox to 4\wd\vfile@spbox{{\color{lightgray}%
+    \hss
+    $\vcenter{\pdfliteral{q .4 w 1 j -.8 -1 m -.8 1 l .8 0 l b Q}}\m@th$%
+    \hss
+}}%
+
+
+%% Usage
+
+% \uccode`@=1                % recognize @ as letter
+% \vfile {foo.tex} {32} {70} % print lines 32,70 from foo.tex
