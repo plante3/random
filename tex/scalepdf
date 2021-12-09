@@ -1,14 +1,15 @@
 #!/bin/bash
 
 usage() {
-	echo <<'_EOF_'
-Concatenate PDF files.
+	cat <<_EOF_
+$(basename "$0") [options] width file
+Resize each page of PDF file to given width.
     -h, --help
         Print help and exit.
     -o, --outfile filename
         Specify output filename (without extension).
     -k, --keep
-		Keep auxiliary TeX files.
+        Keep auxiliary TeX files.
     --
         Marks end of options.
 _EOF_
@@ -18,6 +19,7 @@ while [[ "$1" =~ ^- ]]; do
 	case "$1" in
 		-h|--help)
 			usage
+			exit
 			shift
 			;;
 		-o|--outfile)
@@ -38,43 +40,57 @@ while [[ "$1" =~ ^- ]]; do
 			;;
 	esac
 done
-(( $# <= 1 )) && { usage 1>&2; exit; }
+(( $# == 2 )) || { usage 1>&2; exit 1; }
 : ${outfile:=texput}
 
-pdfs=
-for pdf in "$@"; do
-	[[ -r "$pdf" && "$pdf" =~ \.(pdf|PDF)$ ]] || \
-		{ echo "$(basename $0): skipping file $pdf." 1>&2; continue; }
-	pdfs+="\\catpdf{$pdf}"
-done
+case "$1" in
+	[aA]3)
+		width="297mm"
+		;;
+	[aA]4)
+		width="210mm"
+		;;
+	[aA]5)
+		width="148.5mm"
+		;;
+	*)
+		width="$1"
+		;;
+esac
+
+[[ -r "$2" && "$2" =~ \.(pdf|PDF)$ ]] || \
+	{ echo "$(basename $0): skipping file $2." 1>&2; exit 1; }
 
 tee "$outfile.tex" <<-'_EOF_' >/dev/null
 	\catcode`@=11
 	\newcount\pageno
+	\newdimen\width
 	\hoffset-1in \voffset-1in
 	
-	\def\catpdf#1{{%
-		\edef\catpdfname{\detokenize\expanded{{#1}}}%
-		\pageno\@ne \catpdfpage
+	\def\scalepdf#1{{%
+		\edef\inspdfname{\detokenize\expanded{{#1}}}%
+		\pdfpagewidth\width
+		\pageno\@ne \scalepdfpage
 		\loop
 		\ifnum\pageno<\pdflastximagepages
 			\advance\pageno\@ne
-			\catpdfpage
+			\scalepdfpage
 		\repeat
 	}}
-	\def\catpdfpage{{%
-		\pdfximage page\pageno{\catpdfname}%
-		\pdfpagewidth\dimexpr\pdfximagebbox\pdflastximage3
-			-\pdfximagebbox\pdflastximage1 \relax
-		\pdfpageheight\dimexpr\pdfximagebbox\pdflastximage4
+	\def\scalepdfpage{{%
+		\pdfximage width\width page\pageno{\inspdfname}%
+		\dimen@\dimexpr\pdfximagebbox\pdflastximage4
 			-\pdfximagebbox\pdflastximage2 \relax
+		\count@\dimexpr\pdfximagebbox\pdflastximage3
+			-\pdfximagebbox\pdflastximage1 \relax
+		\pdfpageheight\dimexpr\dimen@*\width/\count@ \relax
 		\shipout\vbox to\pdfpageheight
 			{\pdfrefximage\pdflastximage \vfil}%
 	}}
 	
 _EOF_
 
-echo "$pdfs \\end" >> "$outfile".tex
+echo "\\width$width\\relax \\scalepdf{$2} \\end" >> "$outfile".tex
 
 pdftex --interaction=batchmode "$outfile.tex" >/dev/null || \
 	{ echo "$0: error: pdftex returned nonzero exit status; check $outfile.log." 1>&2; exit 1; }
