@@ -1,0 +1,98 @@
+#!/bin/bash
+
+usage() {
+	cat <<_EOF_
+$(basename "$0") [options] pages file
+Extract pages from PDF file.
+    -h, --help
+        Print help and exit.
+    -o, --outfile filename
+        Specify output filename (without extension).
+    -k, --keep
+        Keep auxiliary TeX files.
+    --
+        Marks end of options.
+_EOF_
+}
+
+while [[ "$1" =~ ^- ]]; do
+	case "$1" in
+		-h|--help)
+			usage
+			exit
+			shift
+			;;
+		-o|--outfile)
+			outfile="$2"
+			shift 2
+			;;
+		-k|--keep)
+			keeptex="true"
+			shift
+			;;
+		--)
+			shift
+			break
+			;;
+		*)
+			echo "Unrecognized option $1" 1>&2
+			shift
+			;;
+	esac
+done
+(( $# >= 2 )) || { usage 1>&2; exit 1; }
+: ${outfile:=texput}
+
+pages=
+for i in ${@:1:$#-1}; do
+	pages+="{$i}"
+done
+
+pdf=${!#}
+[[ -r "$pdf" && "$pdf" =~ \.(pdf|PDF)$ ]] || \
+	{ echo "$(basename $0): skipping file $pdf." 1>&2; exit 1; }
+
+tee "$outfile.tex" <<-'_EOF_' >/dev/null
+	\catcode`@=11
+	\newcount\pageno
+	\hoffset-1in \voffset-1in
+	
+	\def\cutpdf#1#2{{%
+		\edef\inspdfname{\detokenize\expanded{{#1}}}%
+		\def\testpage{\in\pageno{#2}}%
+		\pageno\@ne \cutpdfpage
+		\loop
+		\ifnum\pageno<\pdflastximagepages
+			\advance\pageno\@ne
+			\cutpdfpage
+		\repeat
+	}}
+	\def\cutpdfpage{{%
+		\tracingcommands3 \tracingmacros3
+		\if\testpage \relax
+			\pdfximage page\pageno{\inspdfname}%
+			\pdfpagewidth\dimexpr\pdfximagebbox\pdflastximage3
+				-\pdfximagebbox\pdflastximage1 \relax
+			\pdfpageheight\dimexpr\pdfximagebbox\pdflastximage4
+				-\pdfximagebbox\pdflastximage2 \relax
+			\shipout\vbox to\pdfpageheight
+				{\pdfrefximage\pdflastximage \vfil}%
+		\fi
+	}}
+	
+	\long\def\gobbletwo#1#2{}
+	\long\def\gobbletorelax#1\relax{}
+	\long\def\@car#1#2\@nil{#1}
+	\def\in#1#2{\@in{#1}#2\relax}%
+	\def\@in#1#2{\if\relax\@car#2\@nil XY\expandafter\gobbletwo
+		\else \ifnum#1=\numexpr#2\relax XX\expandafter\expandafter\expandafter\gobbletorelax
+		\fi\fi \@in{#1}}
+	
+_EOF_
+
+echo "\\cutpdf{$pdf}{$pages} \\end" >> "$outfile".tex
+
+pdftex --interaction=batchmode "$outfile.tex" >/dev/null || \
+	{ echo "$0: error: pdftex returned nonzero exit status; check $outfile.log." 1>&2; exit 1; }
+[[ "$keeptex" ]] || rm "$outfile.tex" "$outfile.log"
+
