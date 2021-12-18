@@ -1,25 +1,27 @@
 % A brainfuck interpreter implemented fully expandably in TeX.
-% Usage: \bf <stdin> { <program> }
+% first, generate the format:
+%	pdftex --ini \&plain bf.tex &>/dev/null
+% then run
+%	pdftex --shell-escape \&bf 3>&1 1>/dev/null 2>&1
 
 \catcode`@=11
 
 \long\def\gobble#1{}
 \long\def\gobbletwo#1#2{}
-\long\def\gobblefour#1#2#3#4{}
+\long\def\gobblethree#1#2#3{}
 \long\def\firstoftwo#1#2{#1}
 \long\def\secondoftwo#1#2{#2}
 \long\def\afterfi#1#2\fi{\fi#1}
 
 \def\csarg#1#2{\expandafter#1\csname#2\endcsname}
 
-\long\def\ifempty#1{\if\relax\detokenize{#1}\relax
+\def\ifempty#1{\if\relax\detokenize{#1}\relax
 	\expandafter\firstoftwo \else \expandafter\secondoftwo \fi}
 
 \long\def\car#1#2\@nil{#1}
 \long\def\zcar#1{%
 	\ifempty{#1}0{\car#1\@nil}}
 
-\long\def\cdr#1#2\@nil{#2}
 \long\def\zcdr#1{%
 	\ifempty{#1}0{\gobble#1}}
 
@@ -53,51 +55,60 @@
 		\noexpand\else\char#1 \noexpand\fi}
 \endgroup
 
-\long\def\bf#1#{\bf@{#1}}
-\long\def\bf@#1#2{\bfA{}0{}{#1}#2\@nil}
-\long\def\bfA#1#2#3#4#5{%
+\newtoks\bfout
+\def\bf#1{\bfout{}\bfA{}0{}#1\@nil}
+\def\bfA#1#2#3#4{%
 	% #1 bytes before; #2 current byte;
-	% #3 bytes after;  #4 stdin;
-	\ifx\@nil#5\expandafter\gobblefour \else
-		\ifcsname bf:\unexpanded{#5}\endcsname
+	% #3 bytes after. 
+	\ifx\@nil#4\expandafter\gobblethree \else
+		\ifcsname bf:\unexpanded{#4}\endcsname
 			\afterfi{\afterfi{%
-				\csname bf:\unexpanded{#5}\endcsname}}%
+				\csname bf:\unexpanded{#4}\endcsname}}%
 		\else
 			\expandafter\expandafter\expandafter\bfA
 		\fi
-	\fi {#1}{#2}{#3}{#4}}
-\def\bfB#1#2#3#4{\expandafter\bfA\expanded{{#1}{#2}{#3}{#4}}}
+	\fi {#1}{#2}{#3}}
+\def\bfB#1#2#3{\expandafter\bfA\expanded{{#1}{#2}{#3}}}
 
-\csarg\def{bf:>}#1#2#3#4{\bfB{#1{#2}}{\zcar{#3}}{\zcdr{#3}}{#4}}
-\csarg\def{bf:<}#1#2#3#4{\bfB{\zinit{#1}}{\zlast{#1}}{{#2}#3}{#4}}
-\csarg\def{bf:+}#1#2#3#4{\bfB{#1}{\the\numexpr#2+1}{#3}{#4}}
-\csarg\def{bf:-}#1#2#3#4{\bfB{#1}{\the\numexpr#2-1}{#3}{#4}}
-\csarg\def{bf:.}#1#2#3#4{\echar{#2}%
-	\bfB{#1}{#2}{#3}{#4}}
-\csarg\def{bf:,}#1#2#3#4{%
-	\bfB{#1}{\ifempty{#4}0{\number\expandafter`\expanded{\zcar{#4}}}}{#3}{\ifempty{#4}{}{\gobble#4}}}
+\csarg\def{bf:>}#1#2#3{\bfB{#1{#2}}{\zcar{#3}}{\zcdr{#3}}}
+\csarg\def{bf:<}#1#2#3{\bfB{\zinit{#1}}{\zlast{#1}}{{#2}#3}}
+\csarg\def{bf:+}#1#2#3{\bfB{#1}{\the\numexpr#2+1}{#3}}
+\csarg\def{bf:-}#1#2#3{\bfB{#1}{\the\numexpr#2-1}{#3}}
+\csarg\def{bf:.}#1#2#3{\bfout\expanded{{\the\bfout\echar{#2}}}%
+	\bfB{#1}{#2}{#3}}
+\csarg\def{bf:,}#1#2#3{%
+	\echon{^^1b[2m> ^^1b[0m}%
+	\read\m@ne to\cell
+	\ifnum\pdfstrcmp{\cell}{EOF}=\z@
+		\afterfi{\bfB{#1}0{#3}}%
+	\else
+		\afterfi{\bfB{#1}{\number\expandafter`\cell}{#3}}%
+	\fi}
 
-\csarg\def{bf:[}#1#2#3#4{%
-	\bfI{{#1}{#2}{#3}{#4}}{}0}
-\long\def\bfI#1#2#3#4{%
+\csarg\def{bf:[}#1#2#3{%
+	\bfI{{#1}{#2}{#3}}{}0}
+\def\bfI#1#2#3#4{%
 	\ifx[#4\expandafter\bfI\expanded{{#1}{#2[}{\the\numexpr#3+1}\expandafter}\else
 	\ifx]#4\ifnum#3=\z@ \afterfi{\afterfi{\afterfi{\bfL#1{#2}}}}\else
 		\afterfi{\afterfi{\afterfi{\expandafter\bfI\expanded{{#1}{#2]}{\the\numexpr#3-1}}}}}\fi
 	\else \afterfi{\afterfi{\bfI{#1}{#2#4}{#3}}}\fi\fi}
 
-\long\def\bfL#1#2#3#4#5{%
+\def\bfL#1#2#3#4{%
 	\ifnum#2=\z@ \expandafter\secondoftwo \else \expandafter\firstoftwo \fi
-	{\bfA{#1}{#2}{#3}{#4}#5[#5]}{\bfA{#1}{#2}{#3}{#4}}}
+	{\bfA{#1}{#2}{#3}#4[#4]}{\bfA{#1}{#2}{#3}}}
 
-% Test programs
+\endlinechar\m@ne
+\hfuzz\maxdimen \vfuzz\maxdimen
+\hbadness\@M \vbadness\@M
+\output={\setbox\z@\box\@cclv \global\deadcycles\z@}
 
-\edef\tmpa{\bf{++++++++++[>+++>++++>+++++>+++++++>+++++++++>++++++++++>+++++++++++>++++++++++++<<<<<<<<-]>>>>+++.<<<++.>>>>+++++++.>+++++++++.<<<<<.>>>>>>++++++++.<--------.>----.>+.<<<<<<<.>>>>>>----.<<.>>+++++++.<++.+.>-.>.<<<<<<<.>>+++++++++.<+.}}
-\tt \meaning\tmpa % -> I am very naughty ;)
+\def\escape{\immediate\write18 }
+\def\echo#1{\escape{echo "#1" >&3}}
+\def\echon#1{\escape{echo -n "#1" >&3}}
 
-\edef\tmpb{\bf{++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.}}
-\meaning\tmpb % -> Hello World!
+\everyjob={\tracingcommands3 \tracingmacros3 \init}
+\def\init{\echo{Enter brainfuck program (or bye to exit): ^^1b[33m}\afterassignment\dobf \read\m@ne to\program}
+\def\dobf{\echon{^^1b[0m}\ifnum\pdfstrcmp{\program}{bye}=\z@ \expandafter\end \else \expandafter\dobfA \program\@nil \fi}
+\def\dobfA#1\@nil\fi{\fi \bf{#1}\echo{^^1b[1m\the\bfout^^1b[0m}\init}
 
-\edef\tmpc{\bf abcde{,[+.,]}} 
-\meaning\tmpc % -> bcdef
-
-\bye
+\dump
