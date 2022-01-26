@@ -12,18 +12,18 @@
 	\ifdim\z@=\dp\z@\else \kern3\p@\hbox{\llap{+\ }\the\dp\z@} \fi}%
 	$\kern3\p@
 	\lower\dp\z@\vbox{\ialign{\hbox to5\p@{\hss##\hss}\crcr
-		\hrulefill \crcr
+		\hrulefill \crcr\noalign{\kern-.4\p@}%
 		\vrule height\ht\z@ depth\dp\z@ \crcr
 		\hrulefill \crcr
 	}}\kern4\p@
 	\vbox{\halign{##\crcr
 		\hidewidth\the\wd\z@\hidewidth \crcr\noalign{\kern3\p@}%
-		\vrule height2.5\p@ depth2.5\p@\hrulefill\vrule \crcr\noalign{\kern4\p@}
+		\vrule height2.5\p@ depth2.5\p@ \leaders\hrule\hskip\wd\z@ \vrule \crcr\noalign{\kern4\p@}
 		\lower.4\p@\hbox{\dashbox{\box\z@}}%
 		\crcr
 	}}%
 }}
-\font\demoboxF=cmtt10
+\font\demoboxF=cmvtt8
 
 \protected\long\def\dashbox#1{\hbox{%
 	\setbox\z@\hbox{#1}\raise-\dp\z@\vbox{%
