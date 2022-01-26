@@ -1,0 +1,30 @@
+#!/bin/bash
+
+_open() ( zathura -- "$@" >/dev/null 2>&1 & )
+
+:	${TEXCOMPILE:=pdflatex -interaction nonstopmode} \
+	${TEXDOCUMENTCLASS:='\documentclass[preview, border=20pt, 12pt]{standalone}\usepackage{graphicx}'} \
+	${TEXPREAMBLE:=plante.tex} \
+	${TEXERRORCONTEXTLINES:=5} \
+	${TEXIT:=/ehome/plante/tex/TeXit} \
+	${TEXTMPFILE:=469851141438701569}
+
+cd /tmp
+
+cat << _EOF_ > "$TEXTMPFILE.tex"
+$TEXDOCUMENTCLASS%
+\input{$TEXIT/$TEXPREAMBLE}%
+\begin{document}
+$@
+\end{document}
+_EOF_
+
+if $TEXCOMPILE "$TEXTMPFILE.tex" >/dev/null 2>&1; then
+	_open "$TEXTMPFILE.pdf"
+else
+	ret=$?
+	[[ -f "$TEXTMPFILE.pdf" ]] && _open "$TEXTMPFILE.pdf"
+	grep --color=auto -m 1 -A $TEXERRORCONTEXTLINES '^! .*$' "$TEXTMPFILE.log" 2>/dev/null
+	exit $ret
+fi
+
