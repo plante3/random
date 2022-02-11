@@ -1,30 +1,43 @@
 #!/bin/bash
 
-_open() ( zathura -- "$@" >/dev/null 2>&1 & )
-
-:	${TEXCOMPILE:=pdflatex -interaction nonstopmode} \
-	${TEXDOCUMENTCLASS:='\documentclass[preview, border=20pt, 12pt]{standalone}\usepackage{graphicx}'} \
-	${TEXPREAMBLE:=plante.tex} \
-	${TEXERRORCONTEXTLINES:=5} \
-	${TEXIT:=/ehome/plante/tex/TeXit} \
-	${TEXTMPFILE:=469851141438701569}
+_view() {
+	[[ -f "$*" ]] || return
+	pdftoppm -png -r 300 -- "$*" "$*"
+	( sxiv -- "$*-1.png" >/dev/null 2>&1 & )
+}
 
 cd /tmp
+tmp=$(mktemp -p .) || exit 1
 
-cat << _EOF_ > "$TEXTMPFILE.tex"
-$TEXDOCUMENTCLASS%
-\input{$TEXIT/$TEXPREAMBLE}%
+:	${texcmdline:=pdflatex -interaction nonstopmode -no-shell-escape}
+
+case "$(basename "$0")" in
+	,,)
+		texpre='\begin{gather*}'; texpost='\end{gather*}'
+		;;
+	,align)
+		texpre='\begin{align*}'; texpost='\end{align*}'
+		;;
+	*)
+		texpre=; texpost=
+		;;
+esac
+
+cat << _EOF_ > "$tmp"
+\documentclass[preview, border=20pt, 12pt]{standalone}
+\usepackage{mathtools, amssymb, amsthm}
 \begin{document}
-$@
+$texpre%
+$*%
+$texpost%
 \end{document}
 _EOF_
 
-if $TEXCOMPILE "$TEXTMPFILE.tex" >/dev/null 2>&1; then
-	_open "$TEXTMPFILE.pdf"
+if $texcmdline -jobname "$tmp" -- "$tmp" <&- >/dev/null 2>&1; then
+	_view "$tmp.pdf"
 else
 	ret=$?
-	[[ -f "$TEXTMPFILE.pdf" ]] && _open "$TEXTMPFILE.pdf"
-	grep --color=auto -m 1 -A $TEXERRORCONTEXTLINES '^! .*$' "$TEXTMPFILE.log" 2>/dev/null
+	_view "$tmp.pdf"
+	grep --color=auto -m 1 -A 5 '^! .*$' -- "$tmp.log" 2>/dev/null
 	exit $ret
 fi
-
